@@ -85,8 +85,8 @@ export class OpenAIRealtimeClient extends EventEmitter {
         turn_detection: {
           type:              'server_vad',
           threshold:         0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 600,
+          prefix_padding_ms: 200,
+          silence_duration_ms: 400,
         },
         modalities: ['text', 'audio'],
         temperature: 0.8,
@@ -179,6 +179,7 @@ export class OpenAIRealtimeClient extends EventEmitter {
 
       // VAD : début de parole utilisateur (interrompre l'audio IA en cours)
       case 'input_audio_buffer.speech_started': {
+        this._send({ type: 'response.cancel' })
         this.emit('speech_started')
         break
       }

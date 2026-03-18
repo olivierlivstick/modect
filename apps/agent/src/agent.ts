@@ -189,13 +189,9 @@ export class ModectAgent {
   }
 
   private async _publishAudioChunk(pcm16: Buffer): Promise<void> {
-    const samples    = new Int16Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength / 2)
-    const durationMs = Math.floor((samples.length / SAMPLE_RATE) * 1000)
-
+    const samples = new Int16Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength / 2)
     const frame = new AudioFrame(samples, SAMPLE_RATE, NUM_CHANNELS, samples.length)
     await this.audioSource.captureFrame(frame)
-
-    await new Promise<void>((resolve) => setTimeout(resolve, durationMs))
   }
 
   // --- Fin d'appel ---
