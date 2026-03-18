@@ -29,7 +29,7 @@ WORKDIR /app
 
 # Uniquement les dépendances de production
 COPY apps/agent/package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copier le build compilé depuis le builder
 COPY --from=builder /app/dist ./dist
