@@ -1,5 +1,5 @@
-# ── Build stage (v4) ─────────────────────────────────────────────────────────
-FROM node:20-slim AS builder
+# ── Runtime (tsx, pas de compilation TypeScript) ─────────────────────────────
+FROM node:20-slim
 
 # Outils nécessaires pour compiler @livekit/rtc-node (addon natif Rust/N-API)
 RUN apt-get update && apt-get install -y \
@@ -8,35 +8,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Installer les dépendances (avec les devDeps pour la compilation TypeScript)
-# Les chemins sont relatifs à la racine du repo (build context = racine)
+# Arg pour forcer le bust de cache Railway
+ARG CACHEBUST=1
+
+# Installer TOUTES les dépendances (tsx est en devDep)
 COPY apps/agent/package*.json ./
 RUN npm install
 
-# Copier les sources et compiler
+# Copier les sources TypeScript
 COPY apps/agent/tsconfig.json ./
 COPY apps/agent/src ./src
-RUN npm run build
 
-# ── Runtime stage ─────────────────────────────────────────────────────────────
-FROM node:20-slim AS runner
-
-RUN apt-get update && apt-get install -y \
-    python3 make g++ \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Uniquement les dépendances de production
-COPY apps/agent/package*.json ./
-RUN npm install --omit=dev
-
-# Copier le build compilé depuis le builder
-COPY --from=builder /app/dist ./dist
-
-# Port exposé (doit correspondre à PORT dans src/index.ts)
 EXPOSE 3001
-
 ENV NODE_ENV=production
 
-CMD ["node", "dist/index.js"]
+# Lancer directement avec tsx (pas de compilation)
+CMD ["node", "--import", "tsx/esm", "src/index.ts"]
