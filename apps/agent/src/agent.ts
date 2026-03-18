@@ -19,6 +19,7 @@ import {
   RemoteTrack,
   TrackKind,
   AudioSource,
+  LocalAudioTrack,
   AudioFrame,
   AudioStream,
 } from '@livekit/rtc-node'
@@ -77,8 +78,9 @@ export class ModectAgent {
       await this.room.connect(this.config.livekitUrl, this.config.agentToken)
       console.log(`[Agent ${this.config.callId}] Connecté à la room ${this.config.roomName}`)
 
-      // 3. Publier le track audio de l'agent
-      await this.room.localParticipant?.publishTrack(this.audioSource)
+      // 3. Publier le track audio de l'agent (API v0.9.x : méthode statique)
+      const agentTrack = LocalAudioTrack.createAudioTrack('audio', this.audioSource)
+      await this.room.localParticipant?.publishTrack(agentTrack)
 
       // 4. Mettre à jour le call
       this.startedAt = new Date()
