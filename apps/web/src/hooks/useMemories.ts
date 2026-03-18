@@ -10,14 +10,17 @@ export function useMemories(beneficiaryId?: string) {
   const fetch = useCallback(async () => {
     if (!beneficiaryId) { setLoading(false); return }
     setLoading(true)
-    const { data, error: err } = await supabase
-      .from('conversation_memory')
-      .select('*')
-      .eq('beneficiary_id', beneficiaryId)
-      .order('importance', { ascending: false })
-    if (err) setError(err.message)
-    else setMemories(data as ConversationMemory[])
-    setLoading(false)
+    try {
+      const { data, error: err } = await supabase
+        .from('conversation_memory')
+        .select('*')
+        .eq('beneficiary_id', beneficiaryId)
+        .order('importance', { ascending: false })
+      if (err) setError(err.message)
+      else setMemories(data as ConversationMemory[])
+    } finally {
+      setLoading(false)
+    }
   }, [beneficiaryId])
 
   useEffect(() => { fetch() }, [fetch])

@@ -26,18 +26,21 @@ export function useCalls(beneficiaryId?: string) {
 
     if (beneficiaryId) query = query.eq('beneficiary_id', beneficiaryId)
 
-    const { data, error: err } = await query
-    if (err) { setError(err.message); setLoading(false); return }
+    try {
+      const { data, error: err } = await query
+      if (err) { setError(err.message); return }
 
-    const enriched = (data ?? []).map((c: Call & { beneficiaries: { first_name: string; last_name: string } | null }) => ({
-      ...c,
-      beneficiary_first_name: c.beneficiaries?.first_name ?? '',
-      beneficiary_last_name:  c.beneficiaries?.last_name  ?? '',
-    })) as CallWithBeneficiary[]
+      const enriched = (data ?? []).map((c: Call & { beneficiaries: { first_name: string; last_name: string } | null }) => ({
+        ...c,
+        beneficiary_first_name: c.beneficiaries?.first_name ?? '',
+        beneficiary_last_name:  c.beneficiaries?.last_name  ?? '',
+      })) as CallWithBeneficiary[]
 
-    setCalls(enriched)
-    setUnreadCount(enriched.filter((c) => c.report_available && !c.report_read_at).length)
-    setLoading(false)
+      setCalls(enriched)
+      setUnreadCount(enriched.filter((c) => c.report_available && !c.report_read_at).length)
+    } finally {
+      setLoading(false)
+    }
   }, [beneficiaryId])
 
   useEffect(() => { fetch() }, [fetch])
