@@ -19,8 +19,6 @@ import { ReportsPage } from '@/pages/reports/ReportsPage'
 import { CallDetailPage } from '@/pages/reports/CallDetail'
 import { MemoriesPage } from '@/pages/memories/MemoriesPage'
 
-// Placeholders (seront remplacés dans les étapes suivantes)
-import { PlaceholderPage } from '@/pages/Placeholder'
 
 export function App() {
   return (
