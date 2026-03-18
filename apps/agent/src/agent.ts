@@ -32,6 +32,7 @@ export interface AgentConfig {
   agentToken:         string
   systemPrompt:       string
   maxDurationMinutes: number
+  model:              string
   livekitUrl:         string
   openAIKey:          string
   supabaseUrl:        string
@@ -62,6 +63,7 @@ export class ModectAgent {
       systemPrompt: config.systemPrompt,
       voice:        'shimmer',
       language:     'fr',
+      model:        config.model,
     })
     this.audioSource = new AudioSource(SAMPLE_RATE, NUM_CHANNELS)
   }

@@ -10,6 +10,8 @@ export interface Profile {
   avatar_url: string | null
   phone: string | null
   timezone: string
+  agent_model: string
+  agent_extra_prompt: string | null
   created_at: string
   updated_at: string
 }

@@ -16,6 +16,7 @@ export interface RealtimeConfig {
   systemPrompt: string
   voice:        string   // alloy | echo | fable | onyx | nova | shimmer
   language:     string   // fr | en | ...
+  model:        string   // gpt-4o-realtime-preview | gpt-4o-mini-realtime-preview | ...
 }
 
 export interface TranscriptEntry {
@@ -37,7 +38,7 @@ export class OpenAIRealtimeClient extends EventEmitter {
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const url = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview'
+      const url = `wss://api.openai.com/v1/realtime?model=${this.config.model}`
 
       this.ws = new WebSocket(url, {
         headers: {

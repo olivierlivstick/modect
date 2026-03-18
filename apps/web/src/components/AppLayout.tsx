@@ -6,6 +6,7 @@ import {
   FileText,
   Brain,
   Settings,
+  SlidersHorizontal,
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -16,8 +17,9 @@ const navItems = [
   { to: '/beneficiary', icon: Users,           label: 'Bénéficiaires' },
   { to: '/sessions',    icon: CalendarDays,    label: 'Planification' },
   { to: '/reports',     icon: FileText,        label: 'Rapports' },
-  { to: '/memories',    icon: Brain,           label: 'Mémoires' },
-  { to: '/settings',    icon: Settings,        label: 'Paramètres' },
+  { to: '/memories',    icon: Brain,              label: 'Mémoires' },
+  { to: '/setup',       icon: SlidersHorizontal,  label: 'Setup' },
+  { to: '/settings',    icon: Settings,           label: 'Paramètres' },
 ]
 
 export function AppLayout() {

@@ -8,7 +8,7 @@ export function useProfile() {
 
   const updateProfile = useCallback(async (
     userId: string,
-    updates: Partial<Pick<Profile, 'full_name' | 'phone' | 'timezone' | 'avatar_url'>>
+    updates: Partial<Pick<Profile, 'full_name' | 'phone' | 'timezone' | 'avatar_url' | 'agent_model' | 'agent_extra_prompt'>>
   ) => {
     setLoading(true)
     setError(null)

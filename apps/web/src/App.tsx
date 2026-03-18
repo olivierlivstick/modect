@@ -19,6 +19,7 @@ import { ReportsPage } from '@/pages/reports/ReportsPage'
 import { CallDetailPage } from '@/pages/reports/CallDetail'
 import { MemoriesPage } from '@/pages/memories/MemoriesPage'
 import { SimulateCallPage } from '@/pages/call/SimulateCall'
+import { SetupPage } from '@/pages/setup/Setup'
 
 
 export function App() {
@@ -52,6 +53,7 @@ export function App() {
           <Route path="/memories"    element={<MemoriesPage />} />
           <Route path="/call"        element={<SimulateCallPage />} />
           <Route path="/settings"    element={<SettingsPage />} />
+          <Route path="/setup"       element={<SetupPage />} />
         </Route>
 
         {/* 404 */}

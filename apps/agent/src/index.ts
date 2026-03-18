@@ -30,7 +30,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }))
  * }
  */
 app.post('/start-agent', async (req, res) => {
-  const { call_id, room_name, agent_token, system_prompt, max_duration_minutes } = req.body
+  const { call_id, room_name, agent_token, system_prompt, max_duration_minutes, model } = req.body
 
   if (!call_id || !room_name || !agent_token || !system_prompt) {
     res.status(400).json({ error: 'Paramètres manquants' })
@@ -47,6 +47,7 @@ app.post('/start-agent', async (req, res) => {
     agentToken:         agent_token,
     systemPrompt:       system_prompt,
     maxDurationMinutes: max_duration_minutes ?? 15,
+    model:              model ?? 'gpt-4o-realtime-preview',
     livekitUrl:         process.env.LIVEKIT_URL!,
     openAIKey:          process.env.OPENAI_API_KEY!,
     supabaseUrl:        process.env.SUPABASE_URL!,

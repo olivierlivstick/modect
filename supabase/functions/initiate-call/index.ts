@@ -81,16 +81,29 @@ Deno.serve(async (req: Request) => {
       .order('ended_at', { ascending: false })
       .limit(5)
 
-    // 6. Construire le system prompt
+    // 6. Récupérer les paramètres agent du caregiver
+    const { data: caregiverProfile } = await supabase
+      .from('profiles')
+      .select('agent_model, agent_extra_prompt')
+      .eq('id', beneficiary.caregiver_id)
+      .single()
+
+    const agentModel = caregiverProfile?.agent_model ?? 'gpt-4o-realtime-preview'
+    const agentExtraPrompt = caregiverProfile?.agent_extra_prompt ?? null
+
+    // 7. Construire le system prompt
     const schedule = call.session_schedules ?? {
       max_duration_minutes: 15,
       suggested_topics: null,
       special_instructions: null,
     }
 
-    const systemPrompt = buildSystemPrompt(beneficiary, memories ?? [], schedule)
+    const basePrompt = buildSystemPrompt(beneficiary, memories ?? [], schedule)
+    const systemPrompt = agentExtraPrompt
+      ? `${agentExtraPrompt}\n\n${basePrompt}`
+      : basePrompt
 
-    // 7. Créer la room LiveKit
+    // 8. Créer la room LiveKit
     const livekitUrl    = Deno.env.get('LIVEKIT_URL')!
     const livekitKey    = Deno.env.get('LIVEKIT_API_KEY')!
     const livekitSecret = Deno.env.get('LIVEKIT_API_SECRET')!
@@ -179,6 +192,7 @@ Deno.serve(async (req: Request) => {
             agent_token:          agentToken,
             system_prompt:        systemPrompt,
             max_duration_minutes: schedule.max_duration_minutes ?? 15,
+            model:                agentModel,
           }),
         })
         console.log(`[initiate-call] agent service status: ${agentLaunch.status}`)
