@@ -9,12 +9,15 @@ export function useSessionSchedules(beneficiaryId?: string) {
 
   const fetch = useCallback(async () => {
     setLoading(true)
-    let query = supabase.from('session_schedules').select('*')
-    if (beneficiaryId) query = query.eq('beneficiary_id', beneficiaryId)
-    const { data, error: err } = await query.order('time_of_day', { ascending: true })
-    if (err) setError(err.message)
-    else setSchedules(data as SessionSchedule[])
-    setLoading(false)
+    try {
+      let query = supabase.from('session_schedules').select('*')
+      if (beneficiaryId) query = query.eq('beneficiary_id', beneficiaryId)
+      const { data, error: err } = await query.order('time_of_day', { ascending: true })
+      if (err) setError(err.message)
+      else setSchedules(data as SessionSchedule[])
+    } finally {
+      setLoading(false)
+    }
   }, [beneficiaryId])
 
   useEffect(() => { fetch() }, [fetch])

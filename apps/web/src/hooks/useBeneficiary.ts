@@ -9,13 +9,16 @@ export function useBeneficiaries() {
 
   const fetch = useCallback(async () => {
     setLoading(true)
-    const { data, error: err } = await supabase
-      .from('beneficiaries')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (err) setError(err.message)
-    else setBeneficiaries(data as Beneficiary[])
-    setLoading(false)
+    try {
+      const { data, error: err } = await supabase
+        .from('beneficiaries')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (err) setError(err.message)
+      else setBeneficiaries(data as Beneficiary[])
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { fetch() }, [fetch])
