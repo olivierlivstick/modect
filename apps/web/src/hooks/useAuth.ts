@@ -28,8 +28,14 @@ export function useAuth() {
   }, [])
 
   useEffect(() => {
+    // Timeout de sécurité : force loading=false après 5s
+    const timeout = setTimeout(() => {
+      setState((prev) => prev.loading ? { ...prev, loading: false } : prev)
+    }, 5000)
+
     // Récupérer la session initiale
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(timeout)
       const profile = session?.user ? await fetchProfile(session.user.id) : null
       setState({ session, user: session?.user ?? null, profile, loading: false })
     })
@@ -42,7 +48,7 @@ export function useAuth() {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
   }, [fetchProfile])
 
   const signOut = useCallback(async () => {
