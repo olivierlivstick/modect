@@ -1,4 +1,4 @@
-# ── Build stage ──────────────────────────────────────────────────────────────
+# ── Build stage (v4) ─────────────────────────────────────────────────────────
 FROM node:20-slim AS builder
 
 # Outils nécessaires pour compiler @livekit/rtc-node (addon natif Rust/N-API)
