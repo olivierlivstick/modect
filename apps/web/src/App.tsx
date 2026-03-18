@@ -18,6 +18,7 @@ import { SessionsPage } from '@/pages/sessions/SessionsPage'
 import { ReportsPage } from '@/pages/reports/ReportsPage'
 import { CallDetailPage } from '@/pages/reports/CallDetail'
 import { MemoriesPage } from '@/pages/memories/MemoriesPage'
+import { SimulateCallPage } from '@/pages/call/SimulateCall'
 
 
 export function App() {
@@ -49,6 +50,7 @@ export function App() {
           <Route path="/reports"      element={<ReportsPage />} />
           <Route path="/reports/:id"  element={<CallDetailPage />} />
           <Route path="/memories"    element={<MemoriesPage />} />
+          <Route path="/call"        element={<SimulateCallPage />} />
           <Route path="/settings"    element={<SettingsPage />} />
         </Route>
 

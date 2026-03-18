@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { useForm } from 'react-hook-form'
+import { supabase } from '@/lib/supabase'
 import type { Beneficiary } from '@modect/shared'
 
 type EditableFields = Pick<
@@ -25,6 +26,51 @@ export function BeneficiaryDetailPage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [simulating, setSimulating] = useState(false)
+  const [simError, setSimError] = useState<string | null>(null)
+
+  const simulateCall = async () => {
+    if (!beneficiary) return
+    setSimulating(true)
+    setSimError(null)
+    try {
+      // 1. Créer un call dans Supabase
+      const { data: call, error: callErr } = await supabase
+        .from('calls')
+        .insert({ beneficiary_id: beneficiary.id, scheduled_at: new Date().toISOString(), status: 'scheduled' })
+        .select('id')
+        .single()
+      if (callErr || !call) throw new Error('Impossible de créer l\'appel')
+
+      // 2. Appeler initiate-call
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-call`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ call_id: call.id }),
+        }
+      )
+      const json = await res.json()
+      if (!res.ok || !json.user_token) throw new Error(json.error ?? 'Erreur initiate-call')
+
+      // 3. Naviguer vers la page d'appel
+      const params = new URLSearchParams({
+        token:   json.user_token,
+        url:     json.livekit_url,
+        persona: beneficiary.ai_persona_name ?? 'Marie',
+      })
+      navigate(`/call?${params.toString()}`)
+    } catch (err) {
+      setSimError(err instanceof Error ? err.message : 'Erreur inconnue')
+    } finally {
+      setSimulating(false)
+    }
+  }
 
   const { register, handleSubmit, reset } = useForm<EditableFields>({
     values: beneficiary ?? undefined,
@@ -84,6 +130,10 @@ export function BeneficiaryDetailPage() {
               <CalendarDays size={16} /> Planifier
             </Button>
           </Link>
+          <Button variant="primary" size="sm" loading={simulating} onClick={simulateCall}>
+            <Phone size={16} /> Simuler un appel
+          </Button>
+          {simError && <p className="text-xs text-red-500 self-center">{simError}</p>}
           {editing ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => { setEditing(false); reset() }}>
