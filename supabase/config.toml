@@ -36,7 +36,7 @@ enable_confirmations = false   # mettre true en production
 enable_signup = false
 
 [functions.initiate-call]
-verify_jwt = true
+verify_jwt = false   # auth gérée en interne via admin client
 
 [functions.realtime-agent]
 verify_jwt = true
