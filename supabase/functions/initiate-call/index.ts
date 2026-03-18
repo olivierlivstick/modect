@@ -163,25 +163,29 @@ Deno.serve(async (req: Request) => {
       console.warn(`Bénéficiaire ${beneficiary.id} n'a pas de push_token`)
     }
 
-    // 12. Lancer realtime-agent en background (fire-and-forget)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    // 12. Lancer l'agent Railway directement
+    const agentServiceUrl = Deno.env.get('AGENT_SERVICE_URL')
 
-    // On lance sans await pour ne pas bloquer la réponse
-    fetch(`${supabaseUrl}/functions/v1/realtime-agent`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${serviceKey}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify({
-        call_id,
-        room_name:     roomName,
-        agent_token:   agentToken,
-        system_prompt: systemPrompt,
-        max_duration_minutes: schedule.max_duration_minutes ?? 15,
-      }),
-    }).catch((err) => console.error('Failed to launch realtime-agent:', err))
+    if (!agentServiceUrl) {
+      console.warn('[initiate-call] AGENT_SERVICE_URL non défini — agent non lancé')
+    } else {
+      try {
+        const agentLaunch = await fetch(`${agentServiceUrl}/start-agent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            call_id,
+            room_name:            roomName,
+            agent_token:          agentToken,
+            system_prompt:        systemPrompt,
+            max_duration_minutes: schedule.max_duration_minutes ?? 15,
+          }),
+        })
+        console.log(`[initiate-call] agent service status: ${agentLaunch.status}`)
+      } catch (err) {
+        console.error('[initiate-call] Failed to reach agent service:', err)
+      }
+    }
 
     // 13. Réponse succès
     return new Response(

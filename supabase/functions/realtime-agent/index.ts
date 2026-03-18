@@ -40,18 +40,23 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Déléguer au service Node.js (fire-and-forget)
-    fetch(`${agentServiceUrl}/start-agent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        call_id,
-        room_name,
-        agent_token,
-        system_prompt,
-        max_duration_minutes: max_duration_minutes ?? 15,
-      }),
-    }).catch((err) => console.error('[realtime-agent] Failed to reach agent service:', err))
+    // Déléguer au service Node.js (on attend la réponse pour que Deno ne tue pas la requête)
+    try {
+      const agentRes = await fetch(`${agentServiceUrl}/start-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          call_id,
+          room_name,
+          agent_token,
+          system_prompt,
+          max_duration_minutes: max_duration_minutes ?? 15,
+        }),
+      })
+      console.log(`[realtime-agent] Agent service responded: ${agentRes.status}`)
+    } catch (err) {
+      console.error('[realtime-agent] Failed to reach agent service:', err)
+    }
 
     return new Response(
       JSON.stringify({ status: 'dispatched', call_id }),

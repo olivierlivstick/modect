@@ -28,27 +28,31 @@ export function useAuth() {
   }, [])
 
   useEffect(() => {
-    // Timeout de sécurité : force loading=false après 5s
-    const timeout = setTimeout(() => {
-      setState((prev) => prev.loading ? { ...prev, loading: false } : prev)
-    }, 5000)
-
-    // Récupérer la session initiale
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      clearTimeout(timeout)
-      const profile = session?.user ? await fetchProfile(session.user.id) : null
-      setState({ session, user: session?.user ?? null, profile, loading: false })
+    // Récupérer la session initiale — session en priorité, profil en background
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setState((prev) => ({ ...prev, session, user: session?.user ?? null, loading: false }))
+      if (session?.user) {
+        fetchProfile(session.user.id).then((profile) =>
+          setState((prev) => ({ ...prev, profile }))
+        ).catch(() => {/* profile optionnel */})
+      }
+    }).catch(() => {
+      setState((prev) => ({ ...prev, loading: false }))
     })
 
     // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        const profile = session?.user ? await fetchProfile(session.user.id) : null
-        setState({ session, user: session?.user ?? null, profile, loading: false })
+      (_event, session) => {
+        setState((prev) => ({ ...prev, session, user: session?.user ?? null, loading: false }))
+        if (session?.user) {
+          fetchProfile(session.user.id).then((profile) =>
+            setState((prev) => ({ ...prev, profile }))
+          ).catch(() => {/* profile optionnel */})
+        }
       }
     )
 
-    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
+    return () => { subscription.unsubscribe() }
   }, [fetchProfile])
 
   const signOut = useCallback(async () => {
