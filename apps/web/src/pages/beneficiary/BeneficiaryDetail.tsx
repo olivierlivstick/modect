@@ -42,21 +42,11 @@ export function BeneficiaryDetailPage() {
         .single()
       if (callErr || !call) throw new Error('Impossible de créer l\'appel')
 
-      // 2. Appeler initiate-call
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-call`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ call_id: call.id }),
-        }
-      )
-      const json = await res.json()
-      if (!res.ok || !json.user_token) throw new Error(json.error ?? 'Erreur initiate-call')
+      // 2. Appeler initiate-call via le client Supabase (auth automatique)
+      const { data: json, error: fnErr } = await supabase.functions.invoke('initiate-call', {
+        body: { call_id: call.id },
+      })
+      if (fnErr || !json?.user_token) throw new Error(fnErr?.message ?? json?.error ?? 'Erreur initiate-call')
 
       // 3. Naviguer vers la page d'appel
       const params = new URLSearchParams({
