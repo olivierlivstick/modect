@@ -60,7 +60,7 @@ export class ModectAgent {
     this.openai   = new OpenAIRealtimeClient({
       apiKey:       config.openAIKey,
       systemPrompt: config.systemPrompt,
-      voice:        'nova',
+      voice:        'shimmer',
       language:     'fr',
     })
     this.audioSource = new AudioSource(SAMPLE_RATE, NUM_CHANNELS)
