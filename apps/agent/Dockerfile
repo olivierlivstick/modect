@@ -11,7 +11,7 @@ WORKDIR /app
 # Installer les dépendances (avec les devDeps pour la compilation TypeScript)
 # Les chemins sont relatifs à la racine du repo (build context = racine)
 COPY apps/agent/package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copier les sources et compiler
 COPY apps/agent/tsconfig.json ./
