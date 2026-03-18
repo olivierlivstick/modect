@@ -9,12 +9,13 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Installer les dépendances (avec les devDeps pour la compilation TypeScript)
-COPY package*.json ./
+# Les chemins sont relatifs à la racine du repo (build context = racine)
+COPY apps/agent/package*.json ./
 RUN npm ci
 
 # Copier les sources et compiler
-COPY tsconfig.json ./
-COPY src ./src
+COPY apps/agent/tsconfig.json ./
+COPY apps/agent/src ./src
 RUN npm run build
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Uniquement les dépendances de production
-COPY package*.json ./
+COPY apps/agent/package*.json ./
 RUN npm ci --omit=dev
 
 # Copier le build compilé depuis le builder
