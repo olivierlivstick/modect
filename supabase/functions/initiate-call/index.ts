@@ -37,14 +37,18 @@ Deno.serve(async (req: Request) => {
     const supabase = getSupabaseAdmin()
 
     // 2. Récupérer le call
+    console.log(`[initiate-call] call_id reçu: ${call_id}`)
     const { data: call, error: callError } = await supabase
       .from('calls')
       .select('*, session_schedules(*)')
       .eq('id', call_id)
       .single()
 
+    console.log(`[initiate-call] call:`, JSON.stringify(call))
+    console.log(`[initiate-call] callError:`, JSON.stringify(callError))
+
     if (callError || !call) {
-      return new Response(JSON.stringify({ error: 'Call introuvable' }), {
+      return new Response(JSON.stringify({ error: 'Call introuvable', detail: callError?.message }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
