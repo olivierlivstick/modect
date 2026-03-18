@@ -17,11 +17,11 @@ import {
   RoomEvent,
   RemoteParticipant,
   RemoteTrack,
-  RemoteTrackPublication,
-  Track,
+  TrackKind,
   AudioSource,
   LocalAudioTrack,
   AudioFrame,
+  AudioStream,
 } from '@livekit/rtc-node'
 import { createClient } from '@supabase/supabase-js'
 import { OpenAIRealtimeClient } from './openai-realtime.js'
@@ -41,7 +41,6 @@ export interface AgentConfig {
 // Format audio pour OpenAI Realtime API
 const SAMPLE_RATE    = 24000  // Hz (OpenAI Realtime attend 24kHz)
 const NUM_CHANNELS   = 1      // Mono
-const SAMPLES_PER_MS = SAMPLE_RATE / 1000
 
 export class ModectAgent {
   private config:       AgentConfig
@@ -49,7 +48,6 @@ export class ModectAgent {
   private openai:       OpenAIRealtimeClient
   private supabase:     ReturnType<typeof createClient>
   private audioSource:  AudioSource
-  private agentTrack:   LocalAudioTrack | null = null
   private startedAt:    Date | null = null
   private endTimer:     NodeJS.Timeout | null = null
   private audioQueue:   Buffer[] = []
@@ -62,7 +60,7 @@ export class ModectAgent {
     this.openai   = new OpenAIRealtimeClient({
       apiKey:       config.openAIKey,
       systemPrompt: config.systemPrompt,
-      voice:        'nova',    // surclassé par le profil bénéficiaire via systemPrompt
+      voice:        'nova',
       language:     'fr',
     })
     this.audioSource = new AudioSource(SAMPLE_RATE, NUM_CHANNELS)
@@ -80,19 +78,16 @@ export class ModectAgent {
       await this.room.connect(this.config.livekitUrl, this.config.agentToken)
       console.log(`[Agent ${this.config.callId}] Connecté à la room ${this.config.roomName}`)
 
-      // 3. Publier le track audio de l'agent vers les participants
-      this.agentTrack = new LocalAudioTrack(this.audioSource)
-      await this.room.localParticipant?.publishTrack(this.agentTrack, {
-        name: 'agent-audio',
-        source: Track.Source.Microphone,
-      })
+      // 3. Publier le track audio de l'agent
+      const agentTrack = new LocalAudioTrack(this.audioSource)
+      await this.room.localParticipant?.publishTrack(agentTrack)
 
       // 4. Mettre à jour le call
       this.startedAt = new Date()
-      await this.supabase
+      await (this.supabase
         .from('calls')
-        .update({ status: 'in_progress', started_at: this.startedAt.toISOString() })
-        .eq('id', this.config.callId)
+        .update({ status: 'in_progress', started_at: this.startedAt.toISOString() } as never)
+        .eq('id', this.config.callId))
 
       // 5. Brancher les participants déjà présents
       for (const [, participant] of this.room.remoteParticipants) {
@@ -101,7 +96,7 @@ export class ModectAgent {
 
       // 6. Écouter les nouveaux participants
       this.room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
-        if (track.kind === Track.Kind.Audio) {
+        if (track.kind === TrackKind.KIND_AUDIO) {
           this._bridgeAudioFromUser(track, participant)
         }
       })
@@ -136,22 +131,20 @@ export class ModectAgent {
 
   private _handleParticipant(participant: RemoteParticipant) {
     for (const [, publication] of participant.trackPublications) {
-      if (publication.track && publication.kind === Track.Kind.Audio) {
+      if (publication.track && publication.kind === TrackKind.KIND_AUDIO) {
         this._bridgeAudioFromUser(publication.track as RemoteTrack, participant)
       }
     }
   }
 
   private _bridgeAudioFromUser(track: RemoteTrack, participant: RemoteParticipant) {
-    if (track.kind !== Track.Kind.Audio) return
+    if (track.kind !== TrackKind.KIND_AUDIO) return
     console.log(`[Agent] Bridge audio depuis: ${participant.identity}`)
 
-    const audioStream = track.getAudioStream(SAMPLE_RATE, NUM_CHANNELS)
+    const audioStream = new AudioStream(track, SAMPLE_RATE, NUM_CHANNELS)
 
-    // Lire les frames audio et les envoyer à OpenAI
     ;(async () => {
       for await (const frame of audioStream) {
-        // frame.data est un Int16Array (PCM16)
         const pcm16 = Buffer.from(frame.data.buffer)
         this.openai.sendAudio(pcm16)
       }
@@ -163,7 +156,6 @@ export class ModectAgent {
   // --- Bridge audio OpenAI → LiveKit ---
 
   private _setupOpenAIHandlers() {
-    // Recevoir audio IA et le mettre en queue
     this.openai.on('audio', (chunk: Buffer) => {
       this.audioQueue.push(chunk)
       if (!this.isPlayingAI) this._drainAudioQueue()
@@ -173,7 +165,6 @@ export class ModectAgent {
       this.isPlayingAI = false
     })
 
-    // Interruption si l'utilisateur reprend la parole
     this.openai.on('speech_started', () => {
       this.audioQueue = []
       this.isPlayingAI = false
@@ -198,29 +189,18 @@ export class ModectAgent {
   }
 
   private async _publishAudioChunk(pcm16: Buffer): Promise<void> {
-    // Convertir Buffer PCM16 en Int16Array pour AudioFrame
-    const samples = new Int16Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength / 2)
+    const samples    = new Int16Array(pcm16.buffer, pcm16.byteOffset, pcm16.byteLength / 2)
     const durationMs = Math.floor((samples.length / SAMPLE_RATE) * 1000)
 
-    const frame = new AudioFrame(
-      samples,
-      SAMPLE_RATE,
-      NUM_CHANNELS,
-      samples.length,
-    )
-
+    const frame = new AudioFrame(samples, SAMPLE_RATE, NUM_CHANNELS, samples.length)
     await this.audioSource.captureFrame(frame)
 
-    // Petit délai pour suivre le rythme de lecture
     await new Promise<void>((resolve) => setTimeout(resolve, durationMs))
   }
 
   // --- Fin d'appel ---
 
   private async _gracefulGoodbye() {
-    // Laisser l'IA conclure naturellement
-    // On envoie un message système d'instruction de conclusion
-    // puis on attend 30s avant de forcer la fin
     console.log(`[Agent ${this.config.callId}] Conclusion naturelle...`)
     setTimeout(() => this._endCall('timeout'), 30_000)
   }
@@ -236,18 +216,16 @@ export class ModectAgent {
       : 0
 
     try {
-      // Sauvegarder le transcript
-      await this.supabase
+      await (this.supabase
         .from('calls')
         .update({
           status:           reason === 'error' ? 'failed' : 'completed',
           ended_at:         endedAt.toISOString(),
           duration_seconds: durationSec,
           transcript:       this.openai.transcript,
-        })
-        .eq('id', this.config.callId)
+        } as never)
+        .eq('id', this.config.callId))
 
-      // Déclencher generate-summary si l'appel a eu lieu
       if (reason !== 'error' && this.openai.transcript.length > 0) {
         await this._triggerSummary()
       }
@@ -260,10 +238,7 @@ export class ModectAgent {
   }
 
   private async _triggerSummary() {
-    const { data: { session } } = await this.supabase.auth.getSession()
-    const supabaseUrl = this.config.supabaseUrl
-
-    await fetch(`${supabaseUrl}/functions/v1/generate-summary`, {
+    await fetch(`${this.config.supabaseUrl}/functions/v1/generate-summary`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.config.supabaseServiceKey}`,
